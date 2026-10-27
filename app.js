@@ -72,44 +72,5 @@ function showNotice(message) {
   if(!el){el=document.createElement('div');el.id='dbNotice';el.style.cssText='max-width:1100px;margin:10px auto;padding:10px 18px;color:#ead5a7;font-size:12px';document.querySelector('main').prepend(el);}
   el.textContent=message;
 }
-function modalOpen() { $('modal').classList.add('open'); renderAdminModal(); }
-function renderAdminModal() {
-  const dialog=document.querySelector('#modal .dialog');
-  if(!currentUser) {
-    dialog.innerHTML='<button class="close" id="close">×</button><div class="eyebrow">دخول آمن</div><h2>إدارة المكتبة</h2><p class="muted">الدخول متاح لحسابات الإدارة المعتمدة فقط.</p><form class="form" id="loginForm"><label>البريد الإلكتروني<input id="loginEmail" type="email" autocomplete="username" required></label><label>كلمة المرور<input id="loginPassword" type="password" autocomplete="current-password" required></label><button class="btn primary" type="submit">تسجيل الدخول</button><p id="authMessage" class="muted" role="status"></p></form>';
-    $('close').onclick=()=> $('modal').classList.remove('open');
-    $('loginForm').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;$('authMessage').textContent='جارٍ التحقق…';const {error}=await supabase.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});b.disabled=false;if(error){$('authMessage').textContent='تعذر تسجيل الدخول. راجع البريد وكلمة المرور.';return;}await checkAdmin();renderAdminModal();};
-    return;
-  }
-  if(!isAdmin) {
-    dialog.innerHTML='<button class="close" id="close">×</button><div class="eyebrow">حساب غير معتمد</div><h2>مفيش صلاحية إدارة للحساب ده</h2><p class="muted">تم تسجيل الدخول، لكن الحساب مش مضاف لقائمة مديري الموقع. تواصل مع مالك المشروع لإضافته.</p><button class="btn" id="logout">تسجيل الخروج</button>';
-    $('close').onclick=()=> $('modal').classList.remove('open'); $('logout').onclick=async()=>{await supabase.auth.signOut();currentUser=null;isAdmin=false;renderAdminModal();}; return;
-  }
-  dialog.innerHTML='<button class="close" id="close">×</button><div class="eyebrow">إدارة المكتبة والموقع</div><h2>لوحة التحكم</h2><p class="muted">متصل بقاعدة البيانات — '+esc(currentUser.email||'')+'</p><details open><summary style="cursor:pointer;color:var(--gold);padding:10px 0">إضافة محتوى</summary><form class="form" id="addForm"><label>عنوان المحتوى<input id="itemTitle" required maxlength="120"></label><label>رابط المنشور أو الوسائط<input id="itemUrl" type="url" required placeholder="https://t.me/... أو https://youtu.be/..."></label><label>نوع المحتوى<select id="itemType"><option value="telegram">منشور تليجرام</option><option value="youtube">فيديو يوتيوب</option><option value="audio">تسجيل صوتي مباشر</option><option value="video">فيديو مباشر</option></select></label><label>وصف مختصر<textarea id="itemDesc" rows="2" maxlength="300"></textarea></label><button class="btn primary" type="submit">إضافة للمكتبة ＋</button><p id="addMessage" class="muted"></p></form></details><details open><summary style="cursor:pointer;color:var(--gold);padding:14px 0">إعدادات الهوية</summary><form class="form" id="settingsForm"><label>اسم الموقع<input id="setName" maxlength="80" required></label><label>الوصف تحت الاسم<input id="setSubtitle" maxlength="100" required></label><label>العنوان الرئيسي<input id="setHero" maxlength="160" required></label><label>وصف الصفحة الرئيسية<textarea id="setDescription" rows="2" maxlength="400" required></textarea></label><label>رابط قناة تليجرام<input id="setTelegram" type="url" required></label><label>رابط صورة الشعار<input id="setLogo" type="url" placeholder="رابط عام للصورة (اختياري)"></label><label>لون التمييز<input id="setGold" type="color" style="height:45px"></label><label>لون الخلفية<input id="setBg" type="color" style="height:45px"></label><button class="btn primary" type="submit">حفظ الإعدادات</button><p id="settingsMessage" class="muted"></p></form></details><details><summary style="cursor:pointer;color:var(--gold);padding:14px 0">إدارة المحتوى الموجود</summary><div class="admin-list" id="adminItems"></div></details><button class="btn" id="logout" style="margin-top:18px">تسجيل الخروج</button>';
-  $('close').onclick=()=> $('modal').classList.remove('open');
-  $('setName').value=settings.site_name;$('setSubtitle').value=settings.subtitle;$('setHero').value=settings.hero_title;$('setDescription').value=settings.hero_description;$('setTelegram').value=settings.telegram_url;$('setLogo').value=settings.logo_url||'';$('setGold').value=settings.accent_color;$('setBg').value=settings.background_color;
-  $('settingsForm').onsubmit=async e=>{e.preventDefault();const msg=$('settingsMessage');msg.textContent='جارٍ الحفظ…';const row={id:true,site_name:$('setName').value.trim(),subtitle:$('setSubtitle').value.trim(),hero_title:$('setHero').value.trim(),hero_description:$('setDescription').value.trim(),telegram_url:$('setTelegram').value.trim(),logo_url:$('setLogo').value.trim()||null,accent_color:$('setGold').value,background_color:$('setBg').value,updated_at:new Date().toISOString(),updated_by:currentUser.id};const {error}=await supabase.from('site_settings').upsert(row,{onConflict:'id'});if(error){msg.textContent='فشل الحفظ: '+error.message;return;}settings={...defaults,...row};applySettings();msg.textContent='اتحفظت الإعدادات وظهرت لكل الزوار.';};
-  $('addForm').onsubmit=async e=>{e.preventDefault();const msg=$('addMessage');msg.textContent='جارٍ الإضافة…';const url=$('itemUrl').value.trim();let parsed;try{parsed=new URL(url);if(!['https:','http:'].includes(parsed.protocol))throw 0;}catch{msg.textContent='اكتب رابط HTTPS صحيح.';return;}const row={title:$('itemTitle').value.trim(),url,content_type:$('itemType').value,description:$('itemDesc').value.trim(),created_by:currentUser.id};const {error}=await supabase.from('library_items').insert(row);if(error){msg.textContent='فشلت الإضافة: '+error.message;return;}msg.textContent='تمت الإضافة بنجاح.';e.target.reset();await loadPublicData();renderAdminItems();};
-  $('logout').onclick=async()=>{await supabase.auth.signOut();currentUser=null;isAdmin=false;renderAdminModal();};
-  renderAdminItems();
-}
-async function renderAdminItems() {
-  const host=$('adminItems');if(!host||!isAdmin)return;
-  const {data,error}=await supabase.from('library_items').select('*').order('created_at',{ascending:false});
-  if(error){host.textContent='تعذر تحميل المحتوى.';return;}
-  host.innerHTML=(data||[]).map(i=>'<div class="admin-row"><span>'+esc(i.title)+' <small>('+esc(label(i))+')</small></span><button data-del="'+esc(i.id)+'" style="border:0;background:none;color:#e8a29b;cursor:pointer">حذف</button></div>').join('')||'<p class="muted">لا يوجد محتوى.</p>';
-  host.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('متأكد إنك عاوز تحذف المحتوى ده؟'))return;const {error}=await supabase.from('library_items').delete().eq('id',b.dataset.del);if(error){alert('فشل الحذف: '+error.message);return;}await loadPublicData();renderAdminItems();});
-}
-async function checkAdmin() {
-  const {data:{user}}=await supabase.auth.getUser();currentUser=user;
-  if(!user){isAdmin=false;return;}
-  const {data,error}=await supabase.from('site_admins').select('role').eq('user_id',user.id).maybeSingle();
-  isAdmin=!!data&&!error;
-}
 $('search').oninput=render;$('filter').onchange=render;
-$('adminOpen').onclick=modalOpen;$('close').onclick=()=> $('modal').classList.remove('open');
-$('modal').onclick=e=>{if(e.target===$('modal'))$('modal').classList.remove('open');};
-document.onkeydown=e=>{if(e.key==='Escape')$('modal').classList.remove('open');};
-supabase.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;if(!currentUser)isAdmin=false;});
 await loadPublicData();
-await checkAdmin();
