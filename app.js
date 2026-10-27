@@ -22,6 +22,25 @@ function typeOf(i) {
   if (/\.(mp4|webm|mov|m3u8)(\?|$)/i.test(u)) return 'video';
   return 'telegram';
 }
+function safeTelegramUrl(raw) {
+  try {
+    const u = new URL(String(raw || ''));
+    const host = u.hostname.toLowerCase().replace(/^www\./, '');
+    return u.protocol === 'https:' && ['t.me', 'telegram.me'].includes(host)
+      ? u.href
+      : defaults.telegram_url;
+  } catch {
+    return defaults.telegram_url;
+  }
+}
+function safeLogoUrl(raw) {
+  try {
+    const u = new URL(String(raw || ''));
+    return u.protocol === 'https:' ? u.href : '';
+  } catch {
+    return '';
+  }
+}
 function label(i) { return ({telegram:'من تليجرام',youtube:'يوتيوب',audio:'تسجيل صوتي',video:'فيديو'})[typeOf(i)] || 'محتوى'; }
 function tgEmbed(u) {
   try { const x=new URL(u), p=x.pathname.split('/').filter(Boolean); return x.hostname.endsWith('t.me')&&p.length>=2 ? 'https://t.me/'+p[0]+'/'+p[1]+'?embed=1' : null; } catch { return null; }
@@ -62,11 +81,11 @@ function applySettings() {
   document.title=settings.site_name+' | '+settings.subtitle;
   $('brandName').textContent=settings.site_name; $('brandSubtitle').textContent=settings.subtitle;
   $('heroTitle').textContent=settings.hero_title; $('heroDescription').textContent=settings.hero_description;
-  document.querySelectorAll('a[href="https://t.me/mahmoud_fathy_ahmed"]').forEach(a=>a.href=settings.telegram_url);
+  const telegramUrl=safeTelegramUrl(settings.telegram_url);document.querySelectorAll('a[href="https://t.me/mahmoud_fathy_ahmed"]').forEach(a=>a.href=telegramUrl);
   document.documentElement.style.setProperty('--gold',settings.accent_color);
   document.documentElement.style.setProperty('--bg',settings.background_color);
   $('themeMeta').content=settings.background_color;
-  const logo=settings.logo_url ? '<img alt="شعار الموقع" src="'+esc(settings.logo_url)+'" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">' : 'م';
+  const logoUrl=safeLogoUrl(settings.logo_url);const logo=logoUrl ? '<img alt="شعار الموقع" src="'+esc(logoUrl)+'" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">' : 'م';
   $('brandMark').innerHTML=logo;
   document.querySelectorAll('footer .brand .mark').forEach(el=>el.innerHTML=logo);
 }
@@ -113,6 +132,7 @@ function render() {
   }
 }
 async function loadPublicData() {
+  showNotice('جارٍ تحميل محتوى المكتبة…');
   const [s, r] = await Promise.all([
     supabase.from('site_settings').select('*').eq('id',true).maybeSingle(),
     supabase.from('library_items').select('*').eq('is_published',true).order('sort_order',{ascending:true}).order('created_at',{ascending:false})
@@ -121,6 +141,7 @@ async function loadPublicData() {
   if(r.error) { console.error('Library:',r.error.message); showNotice('تعذر تحميل محتوى المكتبة. تحقق من الاتصال ثم أعد تحميل الصفحة.'); }
   else items=r.data||[];
   applySettings(); render();
+  if(!r.error) $('dbNotice')?.remove();
 }
 function showNotice(message) {
   let el=$('dbNotice');
