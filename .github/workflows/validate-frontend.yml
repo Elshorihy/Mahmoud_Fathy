@@ -1,0 +1,26 @@
+name: Validate frontend syntax
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app.js"
+      - "admin.js"
+      - "index.html"
+      - "admin.html"
+      - ".github/workflows/validate-frontend.yml"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check browser JavaScript syntax
+        run: |
+          cp app.js /tmp/app.mjs
+          cp admin.js /tmp/admin.mjs
+          node --check /tmp/app.mjs
+          node --check /tmp/admin.mjs
