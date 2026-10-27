@@ -73,10 +73,44 @@ function applySettings() {
 const favKey='mahmoud-fathy-favorites';const recentKey='mahmoud-fathy-recent';function readLocal(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}function writeLocal(key,v){try{localStorage.setItem(key,JSON.stringify(v))}catch{}}
 function render() {
   const q=$('search').value.trim().toLowerCase(), f=$('filter').value;
-  const list=items.filter(i=>i.is_published!==false && (!q||((i.title+' '+(i.description||'')).toLowerCase().includes(q))) && (f==='all'||typeOf(i)===f));
-  $('count').textContent=String(items.length).padStart(2,'0'); $('empty').hidden=!!list.length;
-  $('grid').innerHTML=list.map(i=>'<article class="card"><div class="cover"><span class="tag">'+esc(label(i))+'</span><span class="play">▶</span></div><div class="body"><h3>'+esc(i.title)+'</h3><p>'+esc(i.description||'محتوى من مكتبة الشيخ محمود فتحي.')+'</p><div class="cardfoot"><span>مكتبة الشيخ</span><button class="textbtn" data-play="'+esc(i.id)+'">تشغيل / عرض ↗</button></div></div><div id="player-'+esc(i.id)+'" hidden></div></article>').join('');
-  document.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{const id=b.dataset.fav;let a=readLocal(favKey);a=a.includes(id)?a.filter(x=>x!==id):[...a,id];writeLocal(favKey,a);b.textContent=a.includes(id)?'★':'☆';b.title=a.includes(id)?'إزالة من المفضلة':'إضافة للمفضلة'});document.querySelectorAll('[data-share]').forEach(b=>b.onclick=async()=>{const i=items.find(x=>x.id===b.dataset.share);if(!i)return;const url=location.href.split('#')[0]+'#library';try{if(navigator.share)await navigator.share({title:i.title,text:i.title,url});else{await navigator.clipboard.writeText(url);alert('تم نسخ رابط الموقع للمشاركة.')}}catch(e){if(e?.name!=='AbortError')alert('انسخ رابط الموقع من شريط العنوان للمشاركة.')}});document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{const el=$('player-'+b.dataset.play), it=items.find(x=>x.id===b.dataset.play); if(!el||!it)return; if(el.hidden){el.hidden=false;el.innerHTML=player(it);b.textContent='إخفاء المشغل ↑';let recent=readLocal(recentKey).filter(x=>x!==it.id);writeLocal(recentKey,[it.id,...recent].slice(0,10));}else{el.hidden=true;el.innerHTML='';b.textContent='تشغيل / عرض ↗';}});
+  const favorites=readLocal(favKey).map(String);
+  const list=items.filter(i=>{
+    if(i.is_published===false) return false;
+    if(q&&!((String(i.title||'')+' '+String(i.description||'')).toLowerCase().includes(q))) return false;
+    if(f==='favorites') return favorites.includes(String(i.id));
+    return f==='all'||typeOf(i)===f;
+  });
+  $('count').textContent=String(items.length).padStart(2,'0');
+  $('empty').hidden=!!list.length;
+  $('empty').textContent=f==='favorites'?'لسه مفيش محتوى في المفضلة. اضغط ☆ على أي بطاقة لحفظها.':'مفيش نتائج مطابقة. جرّب كلمة تانية.';
+  $('grid').innerHTML=list.map(i=>{
+    const id=String(i.id), favorite=favorites.includes(id);
+    return '<article class="card" id="item-'+esc(id)+'"><div class="cover"><span class="tag">'+esc(label(i))+'</span><span class="play" aria-hidden="true">▶</span></div><div class="body"><h3>'+esc(i.title)+'</h3><p>'+esc(i.description||'محتوى من مكتبة الشيخ محمود فتحي.')+'</p><div class="cardfoot"><span>'+esc(label(i))+'</span><button class="textbtn" data-play="'+esc(id)+'" aria-expanded="false">تشغيل / عرض ↗</button></div><div class="card-actions"><button class="textbtn" data-fav="'+esc(id)+'" aria-pressed="'+String(favorite)+'" title="'+(favorite?'إزالة من المفضلة':'إضافة إلى المفضلة')+'">'+(favorite?'★ المفضلة':'☆ المفضلة')+'</button><button class="textbtn" data-share="'+esc(id)+'">مشاركة ↗</button></div></div><div id="player-'+esc(id)+'" hidden></div></article>';
+  }).join('');
+  document.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.fav;let a=readLocal(favKey).map(String);
+    a=a.includes(id)?a.filter(x=>x!==id):[...a,id];writeLocal(favKey,a);
+    if($('filter').value==='favorites') render();
+    else {const active=a.includes(id);b.textContent=active?'★ المفضلة':'☆ المفضلة';b.setAttribute('aria-pressed',String(active));b.title=active?'إزالة من المفضلة':'إضافة إلى المفضلة';}
+  });
+  document.querySelectorAll('[data-share]').forEach(b=>b.onclick=async()=>{
+    const i=items.find(x=>String(x.id)===b.dataset.share);if(!i)return;
+    const url=location.origin+location.pathname+'#item-'+encodeURIComponent(String(i.id));
+    try {
+      if(navigator.share) await navigator.share({title:i.title,text:i.description||'من مكتبة الشيخ محمود فتحي',url});
+      else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);showNotice('تم نسخ رابط المحتوى للمشاركة.');}
+      else {window.prompt('انسخ رابط المحتوى:',url);}
+    } catch(e){if(e?.name!=='AbortError')window.prompt('انسخ رابط المحتوى:',url);}
+  });
+  document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{
+    const el=$('player-'+b.dataset.play),it=items.find(x=>String(x.id)===b.dataset.play);if(!el||!it)return;
+    if(el.hidden){el.hidden=false;el.innerHTML=player(it);b.textContent='إخفاء المشغل ↑';b.setAttribute('aria-expanded','true');let recent=readLocal(recentKey).filter(x=>String(x)!==String(it.id));writeLocal(recentKey,[it.id,...recent].slice(0,10));}
+    else {el.hidden=true;el.replaceChildren();b.textContent='تشغيل / عرض ↗';b.setAttribute('aria-expanded','false');}
+  });
+  if(location.hash.startsWith('#item-')){
+    const id=decodeURIComponent(location.hash.slice(6));
+    requestAnimationFrame(()=>document.getElementById('item-'+id)?.scrollIntoView({block:'start',behavior:'smooth'}));
+  }
 }
 async function loadPublicData() {
   const [s, r] = await Promise.all([
@@ -84,7 +118,7 @@ async function loadPublicData() {
     supabase.from('library_items').select('*').eq('is_published',true).order('sort_order',{ascending:true}).order('created_at',{ascending:false})
   ]);
   if(s.error) console.error('Settings:',s.error.message); else if(s.data) settings={...defaults,...s.data};
-  if(r.error) { console.error('Library:',r.error.message); showNotice('تعذر تحميل محتوى المكتبة من قاعدة البيانات.'); }
+  if(r.error) { console.error('Library:',r.error.message); showNotice('تعذر تحميل محتوى المكتبة. تحقق من الاتصال ثم أعد تحميل الصفحة.'); }
   else items=r.data||[];
   applySettings(); render();
 }
@@ -94,4 +128,15 @@ function showNotice(message) {
   el.textContent=message;
 }
 $('search').oninput=render;$('filter').onchange=render;
+const menuToggle=$('menuToggle'),siteNav=$('siteNav');
+if(menuToggle&&siteNav){
+  menuToggle.addEventListener('click',()=>{
+    const open=siteNav.classList.toggle('open');
+    menuToggle.setAttribute('aria-expanded',String(open));
+    menuToggle.setAttribute('aria-label',open?'إغلاق قائمة التنقل':'فتح قائمة التنقل');
+  });
+  siteNav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
+    siteNav.classList.remove('open');menuToggle.setAttribute('aria-expanded','false');
+  }));
+}
 await loadPublicData();
