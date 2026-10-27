@@ -15,11 +15,14 @@ let settings = { ...defaults }, items = [], currentUser = null, isAdmin = false;
 
 function esc(s='') { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function typeOf(i) {
-  const u=String(i.url||'').trim();
-  if (/^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\//i.test(u)) return 'youtube';
-  if (i.content_type) return i.content_type;
-  if (/\.(mp3|m4a|aac|ogg|wav)(\?|$)/i.test(u)) return 'audio';
-  if (/\.(mp4|webm|mov|m3u8)(\?|$)/i.test(u)) return 'video';
+  const raw=String(i.url||'').trim();
+  let u; try { u=new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)?raw:'https://'+raw); } catch {}
+  const host=u?.hostname.toLowerCase().replace(/^www\./,'')||'';
+  if (['youtube.com','m.youtube.com','music.youtube.com','youtu.be','youtube-nocookie.com'].includes(host)) return 'youtube';
+  const path=u?.pathname||raw.split(/[?#]/)[0];
+  if (/\.(mp3|m4a|aac|ogg|wav|flac|opus)$/i.test(path)) return 'audio';
+  if (/\.(mp4|webm|mov|m3u8|ogv|m4v)$/i.test(path)) return 'video';
+  if (i.content_type && ['audio','video','youtube','telegram'].includes(String(i.content_type).toLowerCase())) return String(i.content_type).toLowerCase();
   return 'telegram';
 }
 function safeTelegramUrl(raw) {
