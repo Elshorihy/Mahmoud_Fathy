@@ -46,27 +46,36 @@ function tgEmbed(u) {
   try { const x=new URL(u), p=x.pathname.split('/').filter(Boolean); return x.hostname.endsWith('t.me')&&p.length>=2 ? 'https://t.me/'+p[0]+'/'+p[1]+'?embed=1' : null; } catch { return null; }
 }
 function ytId(raw) {
-  const value=String(raw||'').trim().replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,'');
+  // Accept canonical YouTube URLs, short links, and URLs with tracking query parameters.
+  const value=String(raw??'').normalize('NFKC').replace(/[\\u200B-\\u200D\\uFEFF]/g,'').trim();
+  if(!value) return null;
+  const candidates=[];
   try {
-    const normalized=/^https?:\/\//i.test(value)?value:'https://'+value;
-    const x=new URL(normalized);
-    const host=x.hostname.toLowerCase().replace(/^www\./,'');
-    let id='';
-    if(host==='youtu.be') id=x.pathname.split('/').filter(Boolean)[0]||'';
-    else if(host.endsWith('youtube.com')||host==='youtube-nocookie.com') {
-      id=x.searchParams.get('v')||'';
-      if(!id) { const m=x.pathname.match(/\/(?:embed|shorts|live|v)\/([^/?#]+)/i); if(m) id=m[1]; }
+    const normalized=/^[a-z][a-z0-9+.-]*:\/\//i.test(value)?value:'https://'+value;
+    const u=new URL(normalized);
+    const host=u.hostname.toLowerCase().replace(/^www\\./,'');
+    if(host==='youtu.be') candidates.push(u.pathname.split('/').filter(Boolean)[0]||'');
+    if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com','youtube.com'].includes(host)) {
+      candidates.push(u.searchParams.get('v')||'');
+      const m=u.pathname.match(/\\/(?:embed|shorts|live|v)\\/([^/?#]+)/i);
+      if(m) candidates.push(m[1]);
     }
-    if(!id && /youtube\.com|youtu\.be|youtube-nocookie\.com/i.test(value)) {
-      const m=value.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{6,})/i);
-      if(m) id=m[1];
-    }
-    id=String(id).split(/[?&#/]/)[0];
-    return /^[a-zA-Z0-9_-]{6,20}$/.test(id)?id:null;
-  } catch {
-    const m=value.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{6,})/i);
-    return m?m[1]:null;
+  } catch {}
+  const patterns=[
+    /youtu\\.be\\/([a-zA-Z0-9_-]{6,20})/i,
+    /youtube(?:-nocookie)?\\.com\\/(?:watch\\?(?:[^#]*&)?v=|embed\\/|shorts\\/|live\\/|v\\/) ([a-zA-Z0-9_-]{6,20})/ix
+  ];
+  // Regex fallback is intentionally tolerant of pasted links with extra text or tracking parameters.
+  const compact=value.replace(/\\s+/g,'');
+  const m1=compact.match(/youtu\\.be\\/([a-zA-Z0-9_-]{6,20})/i);
+  if(m1) candidates.push(m1[1]);
+  const m2=compact.match(/youtube(?:-nocookie)?\\.com\\/(?:watch\\?(?:[^#]*&)?v=|embed\\/|shorts\\/|live\\/|v\\/)([a-zA-Z0-9_-]{6,20})/i);
+  if(m2) candidates.push(m2[1]);
+  for(const candidate of candidates) {
+    const id=String(candidate||'').split(/[?&#/]/)[0];
+    if(/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
   }
+  return null;
 }
 function player(i) {
   let u; try { u=new URL(i.url); if(!['https:','http:'].includes(u.protocol)) throw 0; } catch { return '<p>الرابط غير صالح.</p>'; }
