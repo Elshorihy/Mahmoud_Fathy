@@ -50,12 +50,13 @@ function applySettings() {
   $('brandMark').innerHTML=logo;
   document.querySelectorAll('footer .brand .mark').forEach(el=>el.innerHTML=logo);
 }
+const favKey='mahmoud-fathy-favorites';const recentKey='mahmoud-fathy-recent';function readLocal(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}function writeLocal(key,v){try{localStorage.setItem(key,JSON.stringify(v))}catch{}}
 function render() {
   const q=$('search').value.trim().toLowerCase(), f=$('filter').value;
   const list=items.filter(i=>i.is_published!==false && (!q||((i.title+' '+(i.description||'')).toLowerCase().includes(q))) && (f==='all'||typeOf(i)===f));
   $('count').textContent=String(items.length).padStart(2,'0'); $('empty').hidden=!!list.length;
   $('grid').innerHTML=list.map(i=>'<article class="card"><div class="cover"><span class="tag">'+esc(label(i))+'</span><span class="play">▶</span></div><div class="body"><h3>'+esc(i.title)+'</h3><p>'+esc(i.description||'محتوى من مكتبة الشيخ محمود فتحي.')+'</p><div class="cardfoot"><span>مكتبة الشيخ</span><button class="textbtn" data-play="'+esc(i.id)+'">تشغيل / عرض ↗</button></div></div><div id="player-'+esc(i.id)+'" hidden></div></article>').join('');
-  document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{const el=$('player-'+b.dataset.play), it=items.find(x=>x.id===b.dataset.play); if(!el||!it)return; if(el.hidden){el.hidden=false;el.innerHTML=player(it);b.textContent='إخفاء المشغل ↑';}else{el.hidden=true;el.innerHTML='';b.textContent='تشغيل / عرض ↗';}});
+  document.querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{const id=b.dataset.fav;let a=readLocal(favKey);a=a.includes(id)?a.filter(x=>x!==id):[...a,id];writeLocal(favKey,a);b.textContent=a.includes(id)?'★':'☆';b.title=a.includes(id)?'إزالة من المفضلة':'إضافة للمفضلة'});document.querySelectorAll('[data-share]').forEach(b=>b.onclick=async()=>{const i=items.find(x=>x.id===b.dataset.share);if(!i)return;const url=location.href.split('#')[0]+'#library';try{if(navigator.share)await navigator.share({title:i.title,text:i.title,url});else{await navigator.clipboard.writeText(url);alert('تم نسخ رابط الموقع للمشاركة.')}}catch(e){if(e?.name!=='AbortError')alert('انسخ رابط الموقع من شريط العنوان للمشاركة.')}});document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{const el=$('player-'+b.dataset.play), it=items.find(x=>x.id===b.dataset.play); if(!el||!it)return; if(el.hidden){el.hidden=false;el.innerHTML=player(it);b.textContent='إخفاء المشغل ↑';let recent=readLocal(recentKey).filter(x=>x!==it.id);writeLocal(recentKey,[it.id,...recent].slice(0,10));}else{el.hidden=true;el.innerHTML='';b.textContent='تشغيل / عرض ↗';}});
 }
 async function loadPublicData() {
   const [s, r] = await Promise.all([
