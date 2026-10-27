@@ -27,19 +27,27 @@ function tgEmbed(u) {
   try { const x=new URL(u), p=x.pathname.split('/').filter(Boolean); return x.hostname.endsWith('t.me')&&p.length>=2 ? 'https://t.me/'+p[0]+'/'+p[1]+'?embed=1' : null; } catch { return null; }
 }
 function ytId(raw) {
+  const value=String(raw||'').trim().replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\s+/g,'');
   try {
-    let value=String(raw||'').trim().replace(/[\u200B-\u200D\uFEFF]/g,'');
-    if(!/^https?:\/\//i.test(value)) value='https://'+value;
-    const x=new URL(value), host=x.hostname.toLowerCase().replace(/^www\./,'');
+    const normalized=/^https?:\/\//i.test(value)?value:'https://'+value;
+    const x=new URL(normalized);
+    const host=x.hostname.toLowerCase().replace(/^www\./,'');
     let id='';
     if(host==='youtu.be') id=x.pathname.split('/').filter(Boolean)[0]||'';
-    else if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host)) {
+    else if(host.endsWith('youtube.com')||host==='youtube-nocookie.com') {
       id=x.searchParams.get('v')||'';
-      if(!id) { const m=x.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/?#]+)/i); if(m) id=m[1]; }
+      if(!id) { const m=x.pathname.match(/\/(?:embed|shorts|live|v)\/([^/?#]+)/i); if(m) id=m[1]; }
     }
-    id=id.split(/[?&#/]/)[0];
+    if(!id && /youtube\.com|youtu\.be|youtube-nocookie\.com/i.test(value)) {
+      const m=value.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{6,})/i);
+      if(m) id=m[1];
+    }
+    id=String(id).split(/[?&#/]/)[0];
     return /^[a-zA-Z0-9_-]{6,20}$/.test(id)?id:null;
-  } catch { return null; }
+  } catch {
+    const m=value.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/))([a-zA-Z0-9_-]{6,})/i);
+    return m?m[1]:null;
+  }
 }
 function player(i) {
   let u; try { u=new URL(i.url); if(!['https:','http:'].includes(u.protocol)) throw 0; } catch { return '<p>الرابط غير صالح.</p>'; }
