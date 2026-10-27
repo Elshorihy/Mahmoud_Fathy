@@ -61,10 +61,6 @@ function ytId(raw) {
       if(m) candidates.push(m[1]);
     }
   } catch {}
-  const patterns=[
-    /youtu\\.be\\/([a-zA-Z0-9_-]{6,20})/i,
-    /youtube(?:-nocookie)?\\.com\\/(?:watch\\?(?:[^#]*&)?v=|embed\\/|shorts\\/|live\\/|v\\/) ([a-zA-Z0-9_-]{6,20})/ix
-  ];
   // Regex fallback is intentionally tolerant of pasted links with extra text or tracking parameters.
   const compact=value.replace(/\\s+/g,'');
   const m1=compact.match(/youtu\\.be\\/([a-zA-Z0-9_-]{6,20})/i);
