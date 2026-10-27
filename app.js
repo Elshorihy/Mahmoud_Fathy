@@ -15,9 +15,9 @@ let settings = { ...defaults }, items = [], currentUser = null, isAdmin = false;
 
 function esc(s='') { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function typeOf(i) {
+  const u=String(i.url||'').trim();
+  if (/^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\//i.test(u)) return 'youtube';
   if (i.content_type) return i.content_type;
-  const u=i.url||'';
-  if (/youtu\.be|youtube\.com/i.test(u)) return 'youtube';
   if (/\.(mp3|m4a|aac|ogg|wav)(\?|$)/i.test(u)) return 'audio';
   if (/\.(mp4|webm|mov|m3u8)(\?|$)/i.test(u)) return 'video';
   return 'telegram';
@@ -26,8 +26,20 @@ function label(i) { return ({telegram:'من تليجرام',youtube:'يوتيو�
 function tgEmbed(u) {
   try { const x=new URL(u), p=x.pathname.split('/').filter(Boolean); return x.hostname.endsWith('t.me')&&p.length>=2 ? 'https://t.me/'+p[0]+'/'+p[1]+'?embed=1' : null; } catch { return null; }
 }
-function ytId(u) {
-  try { const x=new URL(u); if(x.hostname.includes('youtu.be')) return x.pathname.split('/').filter(Boolean)[0]; if(x.searchParams.get('v')) return x.searchParams.get('v'); const m=x.pathname.match(/\/(embed|shorts|live)\/([^/?]+)/); return m?m[2]:null; } catch { return null; }
+function ytId(raw) {
+  try {
+    let value=String(raw||'').trim().replace(/[\u200B-\u200D\uFEFF]/g,'');
+    if(!/^https?:\/\//i.test(value)) value='https://'+value;
+    const x=new URL(value), host=x.hostname.toLowerCase().replace(/^www\./,'');
+    let id='';
+    if(host==='youtu.be') id=x.pathname.split('/').filter(Boolean)[0]||'';
+    else if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host)) {
+      id=x.searchParams.get('v')||'';
+      if(!id) { const m=x.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/?#]+)/i); if(m) id=m[1]; }
+    }
+    id=id.split(/[?&#/]/)[0];
+    return /^[a-zA-Z0-9_-]{6,20}$/.test(id)?id:null;
+  } catch { return null; }
 }
 function player(i) {
   let u; try { u=new URL(i.url); if(!['https:','http:'].includes(u.protocol)) throw 0; } catch { return '<p>الرابط غير صالح.</p>'; }
