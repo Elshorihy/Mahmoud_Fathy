@@ -320,7 +320,7 @@ alter table public.activity_log enable row level security;
 create policy "admins read own admin row" on public.admins for select to authenticated using (user_id = auth.uid() or public.admin_role_for_user() = 'owner');
 create policy "owner manages admins" on public.admins for all to authenticated using (public.admin_role_for_user() = 'owner') with check (public.admin_role_for_user() = 'owner');
 
-create policy "public reads settings" on public.site_settings for select to anon, authenticated using (true);
+create policy "public reads public settings" on public.site_settings for select to anon, authenticated using (key in ('brand','hero','social_links','seo_public','podcast_public'));
 create policy "admins manage settings" on public.site_settings for all to authenticated using (public.is_admin()) with check (public.is_admin());
 create policy "public reads nav" on public.nav_items for select to anon, authenticated using (is_visible = true or public.is_admin());
 create policy "admins manage nav" on public.nav_items for all to authenticated using (public.is_admin()) with check (public.is_admin());
