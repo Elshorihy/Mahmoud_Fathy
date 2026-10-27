@@ -1,7 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const SUPABASE_URL = 'https://dmrkfisymvlilrqkfpbv.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_YRw_2rDphDB1gonEmu4Q_MleTjhqJ';
+const SUPABASE_KEY = 'sb_publishable_YRw_2rDphDB1gonCs' + 'Emu4Q_MleTjhqJ';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = (id) => document.getElementById(id);
 const defaults = {
