@@ -1,0 +1,5 @@
+import Link from "next/link";
+import { ArrowRight, Construction } from "lucide-react";
+export default function AdminSectionPage() {
+  return <main className="mx-auto min-h-screen max-w-4xl px-5 py-10 md:px-10"><Link href="/admin" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--brand-muted)] hover:text-[var(--brand-text)]"><ArrowRight size={18}/>العودة للوحة الإدارة</Link><section className="mt-8 rounded-3xl border border-[var(--brand-border)] bg-[var(--brand-card)] p-8 shadow-luxury md:p-12"><span className="grid size-14 place-items-center rounded-2xl bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"><Construction size={26}/></span><h1 className="mt-5 text-3xl font-bold">إعدادات الموقع</h1><p className="mt-3 max-w-2xl leading-8 text-[var(--brand-muted)]">ستُضاف أدوات تعديل الشعار والألوان والخطوط والقوائم والمعاينة المباشرة في المرحلة الثانية.</p><p className="mt-6 rounded-xl border border-[var(--brand-border)] p-4 text-sm leading-7">هذه الصفحة مقصودة كحالة توضيحية في المرحلة الأولى، وليست أداة تحرير مكتملة بعد.</p></section></main>;
+}
